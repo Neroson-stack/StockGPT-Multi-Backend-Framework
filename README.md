@@ -1,5 +1,4 @@
 # StockGPT-Multi-Backend-Framework
-# Multi-LLM StockGPT
 
 This project is an enhanced version of StockGPT that integrates multiple AI backends, including OpenAI, Google Gemini, and Meta LLaMA, for AI-powered stock analysis and investment research.
 
