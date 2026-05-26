@@ -1,0 +1,160 @@
+import pandas as pd
+
+# Load the stock analysis data
+df = pd.read_csv('/content/sample_data/stock.analysis.data.csv')
+
+# Display the first 5 rows of the DataFrame
+display(df.head())
+
+
+import re
+
+# Clean column names for easier access
+# First, remove ' ($)' or ' ($)' suffix using regex
+df.columns = df.columns.str.replace(r'\s*\(\$?\)$', '', regex=True)
+# Then replace spaces with underscores and convert to uppercase
+df.columns = df.columns.str.replace(' ', '_').str.upper()
+
+# Correcting a potential typo if 'STOCKGTP' was intended to be 'STOCKGPT'
+df = df.rename(columns={'STOCKGTP_CURRENT_PRICE': 'STOCKGPT_CURRENT_PRICE'})
+
+# Display cleaned columns (excluding 'STOCKGPT_CURRENT_PRICE' and 'YAHOO_FINANCE_PREVIOUS_CLOSE_PRICE($)') and first few rows to confirm
+print("Cleaned DataFrame Columns:", df.columns.tolist())
+display(df[['TIMESTAMP', 'STOCK', 'STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)', 'YAHOO_FINANCE_CURRENT_PRICE']].head())
+
+
+
+
+import numpy as np
+
+def calculate_mae(actual, predicted):
+    return np.mean(np.abs(actual - predicted))
+
+def calculate_rmse(actual, predicted):
+    return np.sqrt(np.mean((actual - predicted)**2))
+
+def calculate_mape(actual, predicted):
+    # Avoid division by zero by filtering out actual values that are 0
+    non_zero_actual = actual[actual != 0]
+    non_zero_predicted = predicted[actual != 0]
+
+    if len(non_zero_actual) == 0:
+        return np.nan # Cannot calculate MAPE if all actual values are zero
+    return np.mean(np.abs((non_zero_actual - non_zero_predicted) / non_zero_actual)) * 100
+
+
+# Prepare to store results
+analysis_results = []
+
+# Iterate through each unique stock ticker
+for stock_ticker in df['STOCK'].unique():
+    stock_df = df[df['STOCK'] == stock_ticker].copy()
+
+    # Ensure the columns are numeric. Coerce errors will turn non-numeric into NaN.
+    stock_df['YAHOO_FINANCE_CURRENT_PRICE'] = pd.to_numeric(stock_df['YAHOO_FINANCE_CURRENT_PRICE'], errors='coerce')
+    stock_df['STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)'] = pd.to_numeric(stock_df['STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)'], errors='coerce')
+
+    # Drop rows where either actual or predicted is NaN after conversion
+    stock_df.dropna(subset=['YAHOO_FINANCE_CURRENT_PRICE', 'STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)'], inplace=True)
+
+    if not stock_df.empty:
+        actual_values = stock_df['YAHOO_FINANCE_CURRENT_PRICE']
+        predicted_values = stock_df['STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)']
+
+        mae = calculate_mae(actual_values, predicted_values)
+        rmse = calculate_rmse(actual_values, predicted_values)
+        mape = calculate_mape(actual_values, predicted_values)
+
+        # Get additional data for the table
+        last_timestamp = stock_df['TIMESTAMP'].iloc[-1] if not stock_df.empty else None
+        mean_weighted_fair_value = stock_df['STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)'].mean()
+        mean_yahoo_current_price = stock_df['YAHOO_FINANCE_CURRENT_PRICE'].mean()
+
+        analysis_results.append({
+            'Stock': stock_ticker,
+            'MAE': mae,
+            'RMSE': rmse,
+            'MAPE': mape,
+            'Last_Timestamp': last_timestamp,
+            'Mean_StockGPT_Fair_Value': mean_weighted_fair_value,
+            'Mean_Yahoo_Current_Price': mean_yahoo_current_price
+        })
+
+# Convert results to a DataFrame for tabular display
+results_df = pd.DataFrame(analysis_results)
+
+# Reorder columns as requested by the user
+results_df = results_df[['Stock', 'Last_Timestamp', 'Mean_StockGPT_Fair_Value', 'Mean_Yahoo_Current_Price', 'MAE', 'RMSE', 'MAPE']]
+
+# Display the results with centered alignment
+display(results_df.style.set_properties(**{'text-align': 'center'}))
+
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+import re
+
+# --- Column Cleaning (Duplicated from cell 83d3eb2b to ensure consistency) ---
+# First, remove ' ($)' or ' ($)' suffix using regex
+df.columns = df.columns.str.replace(r'\s*\(\$?\)$', '', regex=False)
+# Then replace spaces with underscores and convert to uppercase
+df.columns = df.columns.str.replace(' ', '_').str.upper()
+
+# Correcting a potential typo if 'STOCKGTP' was intended to be 'STOCKGPT'
+df = df.rename(columns={'STOCKGTP_CURRENT_PRICE': 'STOCKGPT_CURRENT_PRICE'})
+# ----------------------------------------------------------------------
+
+
+# Set the aesthetic style of the plots
+sns.set_style("whitegrid")
+
+plt.figure(figsize=(10, 8)) # Remove facecolor from figure, we will set it on axes
+ax = sns.scatterplot(x='STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)',
+                y='YAHOO_FINANCE_CURRENT_PRICE',
+                hue='STOCK',
+                data=df,
+                palette='Dark2',
+                s=100, # Increased marker size for better visibility
+                edgecolor='black') # Added black edge for better distinction
+
+# Set the background color of the plotting area (axes) to black
+ax.set_facecolor('lightskyblue') # Changed to 'lightskyblue' for a sea blue effect
+
+plt.title('Predicted vs. Actual Market Price (All Stocks)')
+plt.xlabel('STOCKGPT Weighted Fair Value (Predicted) ($)')
+plt.ylabel('Yahoo Finance Current Price ($)')
+plt.grid(True, linestyle='--', alpha=0.7, color='black') # Changed grid line color to black
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.show()
+
+
+
+import pandas as pd
+import re
+
+# Load the stock analysis data
+df = pd.read_csv('/content/sample_data/stock.analysis.data.csv')
+
+# Clean column names for easier access
+# First, remove ' ($)' or ' ($)' suffix using regex
+df.columns = df.columns.str.replace(r'\s*\(\$?\)$', '', regex=True)
+# Then replace spaces with underscores and convert to uppercase
+df.columns = df.columns.str.replace(' ', '_').str.upper()
+
+# Correcting a potential typo if 'STOCKGTP' was intended to be 'STOCKGPT'
+df = df.rename(columns={'STOCKGTP_CURRENT_PRICE': 'STOCKGPT_CURRENT_PRICE'})
+
+correlation = df['STOCKGPT_WEIGHTED_FAIR_VALUE_(PREDICTED)'].corr(df['YAHOO_FINANCE_CURRENT_PRICE'])
+print(f"Correlation between STOCKGPT Weighted Fair Value and Yahoo Finance Current Price: {correlation:.2f}")
+
+
+
+
+
+
+
+
+
+
